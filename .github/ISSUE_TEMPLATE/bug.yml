@@ -1,0 +1,32 @@
+name: Bug report
+description: Report an incorrect breakdown, Action failure, or rendering issue.
+title: "bug: "
+labels: [bug]
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Include the relevant comment excerpt or workflow error, with private data removed.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: layout
+    attributes:
+      label: Repository layout and configuration
+      description: Share minimal representative paths and `.github/diff-breakdown.yml` content.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Action version
+      description: Full commit SHA or release tag.
+    validations:
+      required: true

@@ -1,0 +1,45 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const YAML = require('yaml')
+
+const root = path.resolve(__dirname, '..')
+
+test('action metadata points to the committed Node bundle', () => {
+  const action = YAML.parse(fs.readFileSync(path.join(root, 'action.yml'), 'utf8'))
+  assert.equal(action.runs.using, 'node24')
+  assert.equal(action.runs.main, 'dist/index.cjs')
+  assert.equal(action.name, 'Diff Breakdown')
+  assert.equal(action.inputs['config-path'].default, '.github/diff-breakdown.yml')
+  assert.equal(action.inputs['report-path'], undefined)
+  assert.ok(fs.existsSync(path.join(root, action.runs.main)))
+})
+
+test('repository automation metadata parses with the expected release gates', () => {
+  const workflow = YAML.parse(fs.readFileSync(path.join(root, '.github/workflows/ci.yml'), 'utf8'))
+  const dogfood = YAML.parse(fs.readFileSync(path.join(root, '.github/workflows/diff-breakdown.yml'), 'utf8'))
+  const dogfoodConfig = YAML.parse(fs.readFileSync(path.join(root, '.github/diff-breakdown.yml'), 'utf8'))
+  const dependabot = YAML.parse(fs.readFileSync(path.join(root, '.github/dependabot.yml'), 'utf8'))
+  const steps = workflow.jobs.test.steps
+  assert.equal(workflow.permissions.contents, 'read')
+  assert.ok(steps.some(step => step.uses === 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1'))
+  assert.ok(steps.some(step => step.uses === 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020' && step.with['node-version'] === 24))
+  assert.ok(steps.some(step => step.run === 'npm run check'))
+  assert.ok(steps.some(step => step.run === 'git diff --exit-code -- dist'))
+  assert.equal(dogfood.permissions.contents, 'read')
+  assert.equal(dogfood.permissions['pull-requests'], 'write')
+  assert.equal(dogfood.jobs.breakdown.steps[0].uses, 'szijpeter/diff-breakdown@v0.1.0')
+  assert.equal(dogfoodConfig.version, 1)
+  assert.ok(dependabot.updates.some(update => update['package-ecosystem'] === 'npm'))
+  assert.ok(dependabot.updates.some(update => update['package-ecosystem'] === 'github-actions'))
+})
+
+test('package metadata is private and only supports action development', () => {
+  const pkg = require('../package.json')
+  assert.equal(pkg.license, 'Apache-2.0')
+  assert.equal(pkg.name, 'diff-breakdown')
+  assert.equal(pkg.private, true)
+  assert.equal(pkg.bin, undefined)
+  assert.equal(pkg.engines.node, '>=24')
+})

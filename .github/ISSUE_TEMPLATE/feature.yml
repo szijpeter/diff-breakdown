@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a new layout rule, comment view, or configuration capability.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Review problem
+      description: What information is currently hard for a pull-request reviewer to see?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed breakdown
+      description: Describe the smallest useful output and representative repository paths.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundary
+    attributes:
+      label: Metadata-only boundary
+      options:
+        - label: This can be derived without checking out or executing pull-request code.
+          required: true

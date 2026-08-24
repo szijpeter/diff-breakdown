@@ -1,0 +1,35 @@
+name: Diff Breakdown
+description: Explain the shape, scope, and architectural reach of a pull request in one sticky comment.
+author: Peter Szij
+branding:
+  icon: activity
+  color: gray-dark
+inputs:
+  token:
+    description: GitHub token used to read PR metadata and maintain the profile comment.
+    required: true
+  pr-number:
+    description: Pull request number. Defaults to the pull_request_target event PR.
+    required: false
+  config-path:
+    description: Trusted-base-branch YAML or JSON configuration path.
+    required: false
+    default: .github/diff-breakdown.yml
+  comment:
+    description: Create or update the sticky PR comment.
+    required: false
+    default: "true"
+  summary:
+    description: Write the Markdown profile to the Actions job summary.
+    required: false
+    default: "true"
+outputs:
+  total-files:
+    description: Number of files represented in the profile.
+  total-churn:
+    description: Total additions plus deletions.
+  warning-count:
+    description: Number of profile warnings.
+runs:
+  using: node24
+  main: dist/index.cjs

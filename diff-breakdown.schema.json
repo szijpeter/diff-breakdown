@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/szijpeter/diff-breakdown/main/diff-breakdown.schema.json",
+  "title": "Diff Breakdown configuration",
+  "type": "object",
+  "required": ["version"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "marker": {
+      "type": "string",
+      "pattern": "^<!--[A-Za-z0-9_.:/ -]+-->$",
+      "maxLength": 160
+    },
+    "presets": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["auto", "generic", "kotlin-gradle", "java-gradle", "java-maven", "swift-package"]
+      }
+    },
+    "sourceExtensions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^\\.[A-Za-z0-9+_-]+$" }
+    },
+    "generated": { "$ref": "#/$defs/pathSelector" },
+    "categories": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/category" }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fallback": { "type": "boolean" },
+        "roots": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "type": "string", "minLength": 1 },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["pattern"],
+                "properties": {
+                  "pattern": { "type": "string", "minLength": 1 },
+                  "name": { "type": "string", "minLength": 1 }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "platforms": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/platform" }
+    },
+    "dependencyGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "to"],
+            "properties": {
+              "from": { "type": "string", "minLength": 1 },
+              "to": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "views": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/view" }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "commentModules": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "commentFiles": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "commentSymbols": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    }
+  },
+  "$defs": {
+    "pathSelector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "include": { "$ref": "#/$defs/globs" },
+        "exclude": { "$ref": "#/$defs/globs" }
+      }
+    },
+    "globs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "category": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$", "maxLength": 40 },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "icon": { "type": "string", "maxLength": 8 },
+        "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "order": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+        "priority": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+        "include": { "$ref": "#/$defs/globs" },
+        "exclude": { "$ref": "#/$defs/globs" }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "include"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$", "maxLength": 40 },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "include": { "$ref": "#/$defs/globs" },
+        "exclude": { "$ref": "#/$defs/globs" }
+      }
+    },
+    "view": {
+      "enum": ["composition", "status", "modules", "platforms", "api", "dependencies"]
+    }
+  }
+}
