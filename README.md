@@ -23,12 +23,12 @@ jobs:
   breakdown:
     runs-on: ubuntu-latest
     steps:
-      - uses: szijpeter/diff-breakdown@bc613f9011374a65acc55202084142bce3e3cf6a # v0.1.0
+      - uses: szijpeter/diff-breakdown@d42c30f746cd204404b321fbae10693d82cd3ce7 # v0.2.0
         with:
           token: ${{ github.token }}
 ```
 
-No checkout is needed. The example is pinned to the full v0.1.0 commit SHA for a reviewable supply chain.
+No checkout is needed. The example is pinned to the full v0.2.0 commit SHA for a reviewable supply chain.
 
 ## What reviewers see
 
