@@ -9,14 +9,33 @@ const {
 } = require('./render-utils.cjs')
 
 function categoryTable(profile) {
+  const totalChurn = profile.totals.churn
   const rows = [
-    '| Category | Files | Added | Deleted | Churn | Share |',
-    '|---|---:|---:|---:|---:|---:|',
+    '| Category | Files | 🟢 Added | 🔴 Deleted | 📊 Change share |',
+    '|---|---:|---:|---:|---|',
   ]
   for (const category of profile.categories) {
-    rows.push(`| ${category.icon || ''} ${escapeMarkdownTable(category.label)} | ${formatNumber(category.stats.files)} | +${formatNumber(category.stats.additions)} | -${formatNumber(category.stats.deletions)} | ${formatNumber(category.stats.churn)} | ${formatPercent(category.stats.churn, profile.totals.churn)} |`)
+    rows.push(`| ${category.icon || ''} ${escapeMarkdownTable(category.label)} | ${formatNumber(category.stats.files)} | **+${formatNumber(category.stats.additions)}** | **−${formatNumber(category.stats.deletions)}** | \`${textBar(category.stats.churn, totalChurn)}\` ${formatPercent(category.stats.churn, totalChurn)} |`)
   }
   return rows.join('\n')
+}
+
+function countNoun(value, singular, plural = `${singular}s`) {
+  return `${formatNumber(value)} ${value === 1 ? singular : plural}`
+}
+
+function headline(profile) {
+  const metrics = [
+    `**${countNoun(profile.totals.files, 'file')}**`,
+    `🟢 **+${formatNumber(profile.totals.additions)} added**`,
+    `🔴 **−${formatNumber(profile.totals.deletions)} deleted**`,
+  ]
+  if (profile.modules.length > 0) metrics.push(`**${countNoun(profile.modules.length, 'module')}**`)
+  if (profile.platforms.length > 0) metrics.push(`**${countNoun(profile.platforms.length, 'platform')}**`)
+  if (profile.dependencyImpact.available && profile.dependencyImpact.impacted.length > 0) {
+    metrics.push(`**${countNoun(profile.dependencyImpact.impacted.length, 'potential dependent')}**`)
+  }
+  return metrics.join(' · ')
 }
 
 function compositionDiagram(profile) {
@@ -33,9 +52,10 @@ function compositionDiagram(profile) {
 function statusSection(profile) {
   const statuses = Object.entries(profile.totals.statuses).filter(([, count]) => count > 0)
   if (statuses.length === 0) return ''
+  const summary = statuses.map(([status, count]) => `${formatNumber(count)} ${status}`).join(', ')
   const rows = [
     '<details>',
-    '<summary>Change form</summary>',
+    `<summary>Change form — ${summary}</summary>`,
     '',
     '| Status | Files |',
     '|---|---:|',
@@ -60,7 +80,7 @@ function moduleSection(profile, config) {
   const maxima = Object.fromEntries(categoryIds.map(id => [id, Math.max(...modules.map(module => module.categories[id]?.churn || 0))]))
   const rows = [
     '<details open>',
-    '<summary>Module change matrix</summary>',
+    `<summary>Module change matrix — ${countNoun(profile.modules.length, 'changed module')}</summary>`,
     '',
     `| Module | ${categoryIds.map(id => escapeMarkdownTable(labels[id] || id)).join(' | ')} | Total |`,
     `|---|${categoryIds.map(() => '---:').join('|')}|---:|`,
@@ -68,9 +88,9 @@ function moduleSection(profile, config) {
   for (const module of modules) {
     const cells = categoryIds.map(id => {
       const value = module.categories[id]?.churn || 0
-      return `${intensity(value, maxima[id])} ${formatNumber(value)}`
+      return value === 0 ? '·' : `${intensity(value, maxima[id])} ${formatNumber(value)}`
     })
-    rows.push(`| ${inlineCode(module.id)} | ${cells.join(' | ')} | ${formatNumber(module.total.churn)} |`)
+    rows.push(`| ${inlineCode(module.id)} | ${cells.join(' | ')} | **${formatNumber(module.total.churn)}** |`)
   }
   if (profile.modules.length > modules.length) {
     rows.push(`| …${profile.modules.length - modules.length} more | ${categoryIds.map(() => '').join(' | ')} | |`)
@@ -81,19 +101,19 @@ function moduleSection(profile, config) {
 
 function platformSection(profile) {
   if (profile.platforms.length === 0) return ''
-  const maximum = Math.max(...profile.platforms.map(platform => platform.stats.churn))
+  const totalChurn = profile.platforms.reduce((total, platform) => total + platform.stats.churn, 0)
   const rows = [
     '<details>',
-    '<summary>Platform / source-set distribution</summary>',
+    `<summary>Platform distribution — ${countNoun(profile.platforms.length, 'platform')}</summary>`,
     '',
-    '| Platform | Files | Production | Tests | Other | Added | Deleted | Churn | Distribution |',
-    '|---|---:|---:|---:|---:|---:|---:|---:|---|',
+    '| Platform | Files | Production | Tests | Other | 📊 Change share |',
+    '|---|---:|---:|---:|---:|---|',
   ]
   for (const platform of profile.platforms) {
     const production = platform.categories.production?.churn || 0
     const tests = platform.categories.test?.churn || 0
     const other = platform.stats.churn - production - tests
-    rows.push(`| ${escapeMarkdownTable(platform.label)} | ${formatNumber(platform.stats.files)} | ${formatNumber(production)} | ${formatNumber(tests)} | ${formatNumber(other)} | +${formatNumber(platform.stats.additions)} | -${formatNumber(platform.stats.deletions)} | ${formatNumber(platform.stats.churn)} | \`${textBar(platform.stats.churn, maximum)}\` |`)
+    rows.push(`| ${escapeMarkdownTable(platform.label)} | ${formatNumber(platform.stats.files)} | ${formatNumber(production)} | ${formatNumber(tests)} | ${formatNumber(other)} | \`${textBar(platform.stats.churn, totalChurn)}\` ${formatPercent(platform.stats.churn, totalChurn)} |`)
   }
   rows.push('', '</details>')
   return rows.join('\n')
@@ -106,7 +126,7 @@ function apiSection(profile, config) {
   const removals = profile.api.removals.slice(0, config.limits.commentSymbols)
   const rows = [
     '<details>',
-    '<summary>Public API baseline delta</summary>',
+    `<summary>Public API baseline — ${countNoun(profile.api.additions.length, 'visible addition')}, ${countNoun(profile.api.removals.length, 'visible removal')}</summary>`,
     '',
     `- Baseline files: **${formatNumber(apiCategory.stats.files)}**`,
     `- Text additions / removals: **+${formatNumber(apiCategory.stats.additions)} / -${formatNumber(apiCategory.stats.deletions)}**`,
@@ -124,12 +144,25 @@ function dependencySection(profile) {
   if (!impact.available) return ''
   return [
     '<details>',
-    '<summary>Configured dependency impact</summary>',
+    `<summary>Dependency reach — ${countNoun(impact.impacted.length, 'potential dependent')}</summary>`,
     '',
     `- Changed graph modules: ${impact.changed.length > 0 ? impact.changed.map(inlineCode).join(', ') : 'none'}`,
     `- Potentially impacted dependents: ${impact.impacted.length > 0 ? impact.impacted.map(inlineCode).join(', ') : 'none'}`,
     '',
     '> Impact follows configured module edges. It identifies structural reach, not runtime behavior.',
+    '',
+    '</details>',
+  ].join('\n')
+}
+
+function visualizationSection(profile) {
+  const diagram = compositionDiagram(profile)
+  if (!diagram) return ''
+  return [
+    '<details>',
+    '<summary>Visualizations — change composition</summary>',
+    '',
+    diagram,
     '',
     '</details>',
   ].join('\n')
@@ -156,13 +189,13 @@ function renderMarkdown(profile, config, { includeMarker = true } = {}) {
   const comparison = []
   if (profile.context.base) comparison.push(`base ${inlineCode(profile.context.base)}`)
   if (profile.context.head) comparison.push(`head ${inlineCode(profile.context.head.slice(0, 12))}`)
-  if (comparison.length > 0) lines.push(comparison.join(' · '), '')
+  if (comparison.length > 0) lines.push(`<sub>${comparison.join(' · ')}</sub>`, '')
+
+  lines.push(headline(profile), '')
 
   const warnings = warningSection(profile, config)
   if (warnings) lines.push(warnings, '')
   if (views.has('composition')) {
-    const diagram = compositionDiagram(profile)
-    if (diagram) lines.push(diagram, '')
     lines.push(categoryTable(profile), '')
   }
   if (views.has('status')) {
@@ -183,6 +216,10 @@ function renderMarkdown(profile, config, { includeMarker = true } = {}) {
   }
   if (views.has('dependencies')) {
     const section = dependencySection(profile)
+    if (section) lines.push(section, '')
+  }
+  if (views.has('composition')) {
+    const section = visualizationSection(profile)
     if (section) lines.push(section, '')
   }
 
