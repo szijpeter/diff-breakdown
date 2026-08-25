@@ -43,8 +43,14 @@ function intensity(value, maximum) {
 
 function textBar(value, maximum, width = 10) {
   if (maximum <= 0) return '░'.repeat(width)
-  const filled = value === 0 ? 0 : Math.max(1, Math.round((value / maximum) * width))
-  return `${'█'.repeat(filled)}${'░'.repeat(Math.max(0, width - filled))}`
+  const fractionalBlocks = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉']
+  const units = value === 0 ? 0 : Math.max(1, Math.round((value / maximum) * width * 8))
+  const bounded = Math.min(width * 8, units)
+  const filled = Math.floor(bounded / 8)
+  const remainder = bounded % 8
+  const partial = fractionalBlocks[remainder]
+  const empty = width - filled - (partial ? 1 : 0)
+  return `${'█'.repeat(filled)}${partial}${'░'.repeat(Math.max(0, empty))}`
 }
 
 module.exports = {

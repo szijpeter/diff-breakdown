@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   test:
@@ -32,3 +33,12 @@ jobs:
 
       - name: Verify committed action bundle
         run: git diff --exit-code -- dist
+
+      - name: Preview report from this pull request
+        if: github.event_name == 'pull_request'
+        uses: ./
+        with:
+          token: ${{ github.token }}
+          pr-number: ${{ github.event.pull_request.number }}
+          comment: "false"
+          summary: "true"
